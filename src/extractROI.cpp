@@ -182,6 +182,8 @@ public:
 		float hsv[cloudSize][3];
         //ROS_INFO("size of input cloud %d", cloud_xyz_rgb->size());
 		//-------------------------------extracting the r,g,b values
+/**Original**/
+/**---------------------------------------------------------------------------------------*/
 		for(int i=0; i<cloudSize; i++){//i<10; i++){//
 			int rgb_val = *reinterpret_cast<int*>(&cloud_xyz_rgb_ptr->points[i].rgb);
 			rgb[i][0] = ((rgb_val >> 16) & 0xff);
@@ -191,6 +193,24 @@ public:
 			rgbToHsv(rgb[i],hsv[i]);
 		}
 
+/**---------------------------------------------------------------------------------------*/
+
+/**Experimental**/
+/**---------------------------------------------------------------------------------------*/
+/*		for(int i=0; i<cloudSize; i++){//i<10; i++){//
+			int rgb_val = *reinterpret_cast<int*>(&cloud_xyz_rgb_ptr->points[i].rgb);
+			hsv[i][0] = ((rgb_val >> 16) & 0xff);
+			hsv[i][1] = ((rgb_val >> 8) & 0xff);
+			hsv[i][2] = (rgb_val & 0xff);
+            //converting to hsv spectrum
+			//rgbToHsv(rgb[i],hsv[i]);
+		}
+*/
+/**---------------------------------------------------------------------------------------*/
+
+
+/**Original**/
+/**---------------------------------------------------------------------------------------*/
         //extracting region of interests based on HSV values
         //ToDo optimize by using a single pointer only
         pcl::PointIndices::Ptr hsvBasedROI(new pcl::PointIndices());
@@ -202,6 +222,29 @@ public:
         extractHsvBasedROIcloud.setIndices (hsvBasedROI);
         extractHsvBasedROIcloud.setNegative (false);
         extractHsvBasedROIcloud.filter (*hsv_extracted_roi_ptr);
+
+/**---------------------------------------------------------------------------------------*/
+
+
+/**Experimental**/
+/**---------------------------------------------------------------------------------------*/
+/*        hsv_extracted_roi_ptr->width=cloud_xyz_rgb_ptr->width;
+        hsv_extracted_roi_ptr->height=cloud_xyz_rgb_ptr->height;
+        hsv_extracted_roi_ptr->points.resize(hsv_extracted_roi_ptr->height * hsv_extracted_roi_ptr->width);
+
+        for (int i = 0; i < cloudSize; i++){
+
+			if(	hsv[i][0] >=limitH[0] && hsv[i][0] <=limitH[1] &&
+					hsv[i][1] >=limitS[0] && hsv[i][1] <=limitS[1] ) {
+                        hsv_extracted_roi_ptr->points[i].x = cloud_xyz_rgb_ptr->points[i].x ;
+                        hsv_extracted_roi_ptr->points[i].y = cloud_xyz_rgb_ptr->points[i].y ;
+                        hsv_extracted_roi_ptr->points[i].z = cloud_xyz_rgb_ptr->points[i].z ;
+                        hsv_extracted_roi_ptr->points[i].rgb = cloud_xyz_rgb_ptr->points[i].rgb ;
+					}
+        }
+*/
+/**---------------------------------------------------------------------------------------*/
+
 
         //ROS_INFO("size of published cloud %d", hsv_extracted_roi->size());
         //Publish the extracted ROI

@@ -21,7 +21,10 @@ rosbuild_find_ros_package(dynamic_reconfigure)
 include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 gencfg()
 
+
 rosbuild_add_executable(gopalSelectHSVLimits src/selectHSVLimits.cpp)
+
 rosbuild_add_executable(gopalExtractROI src/extractROI.cpp)
-rosbuild_add_executable(gopalExtractMultipleROI src/extractMultipleROI.cpp)
 rosbuild_add_executable(gopalExtractObjectClusters src/extractObjectClusters.cpp)
+
+rosbuild_add_executable(gopalEstimateVfhPose src/estimateVfhPose.cpp)
