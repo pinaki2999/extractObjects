@@ -23,8 +23,11 @@ gencfg()
 
 
 rosbuild_add_executable(gopalSelectHSVLimits src/selectHSVLimits.cpp)
+#rosbuild_add_executable(gopalSetTraingData src/setTraingData.cpp)
 
 rosbuild_add_executable(gopalExtractROI src/extractROI.cpp)
 rosbuild_add_executable(gopalExtractObjectClusters src/extractObjectClusters.cpp)
 
-rosbuild_add_executable(gopalEstimateVfhPose src/estimateVfhPose.cpp)
+#rosbuild_add_executable(gopalEstimateVfhPose src/estimateVfhPose.cpp)
+
+rosbuild_add_executable(gopalEstimatePoseICP src/estimatePoseICP.cpp)

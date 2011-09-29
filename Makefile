@@ -180,17 +180,17 @@ clean-test-results/fast:
 .PHONY : clean-test-results/fast
 
 #=============================================================================
-# Target rules for targets named gopalEstimateVfhPose
+# Target rules for targets named gopalEstimatePoseICP
 
 # Build rule for target.
-gopalEstimateVfhPose: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 gopalEstimateVfhPose
-.PHONY : gopalEstimateVfhPose
+gopalEstimatePoseICP: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 gopalEstimatePoseICP
+.PHONY : gopalEstimatePoseICP
 
 # fast build rule for target.
-gopalEstimateVfhPose/fast:
-	$(MAKE) -f CMakeFiles/gopalEstimateVfhPose.dir/build.make CMakeFiles/gopalEstimateVfhPose.dir/build
-.PHONY : gopalEstimateVfhPose/fast
+gopalEstimatePoseICP/fast:
+	$(MAKE) -f CMakeFiles/gopalEstimatePoseICP.dir/build.make CMakeFiles/gopalEstimatePoseICP.dir/build
+.PHONY : gopalEstimatePoseICP/fast
 
 #=============================================================================
 # Target rules for targets named gopalExtractObjectClusters
@@ -388,19 +388,19 @@ tests/fast:
 .PHONY : tests/fast
 
 # target to build an object file
-src/estimateVfhPose.o:
-	$(MAKE) -f CMakeFiles/gopalEstimateVfhPose.dir/build.make CMakeFiles/gopalEstimateVfhPose.dir/src/estimateVfhPose.o
-.PHONY : src/estimateVfhPose.o
+src/estimatePoseICP.o:
+	$(MAKE) -f CMakeFiles/gopalEstimatePoseICP.dir/build.make CMakeFiles/gopalEstimatePoseICP.dir/src/estimatePoseICP.o
+.PHONY : src/estimatePoseICP.o
 
 # target to preprocess a source file
-src/estimateVfhPose.i:
-	$(MAKE) -f CMakeFiles/gopalEstimateVfhPose.dir/build.make CMakeFiles/gopalEstimateVfhPose.dir/src/estimateVfhPose.i
-.PHONY : src/estimateVfhPose.i
+src/estimatePoseICP.i:
+	$(MAKE) -f CMakeFiles/gopalEstimatePoseICP.dir/build.make CMakeFiles/gopalEstimatePoseICP.dir/src/estimatePoseICP.i
+.PHONY : src/estimatePoseICP.i
 
 # target to generate assembly for a file
-src/estimateVfhPose.s:
-	$(MAKE) -f CMakeFiles/gopalEstimateVfhPose.dir/build.make CMakeFiles/gopalEstimateVfhPose.dir/src/estimateVfhPose.s
-.PHONY : src/estimateVfhPose.s
+src/estimatePoseICP.s:
+	$(MAKE) -f CMakeFiles/gopalEstimatePoseICP.dir/build.make CMakeFiles/gopalEstimatePoseICP.dir/src/estimatePoseICP.s
+.PHONY : src/estimatePoseICP.s
 
 # target to build an object file
 src/extractObjectClusters.o:
@@ -460,7 +460,7 @@ help:
 	@echo "... ROSBUILD_gensrv_lisp"
 	@echo "... clean-test-results"
 	@echo "... edit_cache"
-	@echo "... gopalEstimateVfhPose"
+	@echo "... gopalEstimatePoseICP"
 	@echo "... gopalExtractObjectClusters"
 	@echo "... gopalExtractROI"
 	@echo "... gopalSelectHSVLimits"
@@ -477,9 +477,9 @@ help:
 	@echo "... test-results"
 	@echo "... test-results-run"
 	@echo "... tests"
-	@echo "... src/estimateVfhPose.o"
-	@echo "... src/estimateVfhPose.i"
-	@echo "... src/estimateVfhPose.s"
+	@echo "... src/estimatePoseICP.o"
+	@echo "... src/estimatePoseICP.i"
+	@echo "... src/estimatePoseICP.s"
 	@echo "... src/extractObjectClusters.o"
 	@echo "... src/extractObjectClusters.i"
 	@echo "... src/extractObjectClusters.s"

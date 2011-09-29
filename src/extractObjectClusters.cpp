@@ -9,6 +9,7 @@
 #include "sensor_msgs/PointCloud2.h"
 #include "sensor_msgs/point_cloud_conversion.h"
 #include <ros/publisher.h>
+#include <tf/transform_broadcaster.h>
 
 #include <pcl/filters/passthrough.h>
 #include "pcl/io/pcd_io.h"
@@ -83,6 +84,18 @@ public:
 
                 cloud_cluster->header.frame_id = "openni_rgb_optical_frame";
                 pubClusters[i].publish(*cloud_cluster);
+
+                            Eigen::Vector4f centroid3d;
+                            pcl::compute3DCentroid(*cloud_cluster,centroid3d);
+                            ROS_INFO("Object_%d located at [%f,%f,%f]",i+1, centroid3d[0], centroid3d[1], centroid3d[2]);
+
+                            static tf::TransformBroadcaster br;
+                            tf::Transform transform;
+                            transform.setOrigin( tf::Vector3(centroid3d[0], centroid3d[1], centroid3d[2]) );
+                            transform.setRotation( tf::Quaternion(0, 0, 0) );
+                            stringstream s;
+                            s<<"object_"<<i+1;
+                            br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "openni_rgb_optical_frame", s.str()));
             i++;
           }
         }

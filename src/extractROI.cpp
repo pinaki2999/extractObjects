@@ -36,6 +36,12 @@ public:
 	char timestamp[20];
 	ros::Publisher pubROI;
     float limitH[2], limitS[2];
+    int rgb[640*480][3];
+	float hsv[640*480][3];
+    int rgb_val;
+    int cloudSize;
+    float max,min,r,g,b;
+    float epsilon;
 
     /**
 	 * finds min of three float values
@@ -102,8 +108,8 @@ public:
         32-bit images:
             H, S, V are left as is
 	 */
-	void rgbToHsv(int *rgb, float *hsv){
-		float r = rgb[0];
+	void rgbToHsv(int i){
+		/*float r = rgb[0];
 		r = r / 255.0;
 		float g = rgb[1];
 		g = g / 255.0;
@@ -135,8 +141,37 @@ public:
 		hsv[0] /= 2.0;
 		hsv[1] *= 255.0;
 		hsv[2] *= 255.0;
-
+*/
      //   ROS_INFO("rgbToHsv: %f,%f,%f\n", hsv[0]  , hsv[1], hsv[2]);
+		r = rgb[i][0]/255.0;
+		g = rgb[i][1]/255.0;
+		b = rgb[i][2]/255.0;
+
+
+		max = maxVal(r, g, b);
+		min = minVal(r, g, b);
+
+		hsv[i][2] = max;
+
+		if(hsv[i][2]!=0){
+			hsv[i][1]= (hsv[i][2]-min)/hsv[i][2];
+		} else {
+			hsv[i][1]=0;
+		}
+		if(fabs(hsv[i][2]-r) <= epsilon){
+			hsv[i][0]= (g-b)*60.0/hsv[i][1];
+		} else if(fabs(hsv[i][2]-g) <= epsilon) {
+			hsv[i][0]= 180.0+(b-r)*60.0/hsv[i][1];
+
+		} else if(fabs(hsv[i][2]-b) <= epsilon) {
+			hsv[i][0]=240+(r - g)*60.0/hsv[i][1];
+		}
+
+		if(hsv[i][0]<0.0)hsv[i][0]+=360.0;
+
+		hsv[i][0] /= 2.0;
+		hsv[i][1] *= 255.0;
+		hsv[i][2] *= 255.0;
 
 	}
 
@@ -176,21 +211,19 @@ public:
 
 
 
-		int cloudSize=0;;
+
 		cloudSize= cloud_xyz_rgb_ptr->size();
-		int rgb[cloudSize][3];
-		float hsv[cloudSize][3];
         //ROS_INFO("size of input cloud %d", cloud_xyz_rgb->size());
 		//-------------------------------extracting the r,g,b values
 /**Original**/
 /**---------------------------------------------------------------------------------------*/
 		for(int i=0; i<cloudSize; i++){//i<10; i++){//
-			int rgb_val = *reinterpret_cast<int*>(&cloud_xyz_rgb_ptr->points[i].rgb);
+			rgb_val = *reinterpret_cast<int*>(&cloud_xyz_rgb_ptr->points[i].rgb);
 			rgb[i][0] = ((rgb_val >> 16) & 0xff);
 			rgb[i][1] = ((rgb_val >> 8) & 0xff);
 			rgb[i][2] = (rgb_val & 0xff);
             //converting to hsv spectrum
-			rgbToHsv(rgb[i],hsv[i]);
+			rgbToHsv(i);
 		}
 
 /**---------------------------------------------------------------------------------------*/
@@ -262,7 +295,7 @@ public:
 
     void setPublisher (ros::Publisher *pub){
         this->pubROI = *pub;
-
+        epsilon = 0.00001;
     }
 
     void setHsvLimits(float minH, float maxH,float minS, float maxS){
