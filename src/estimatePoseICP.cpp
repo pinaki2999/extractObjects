@@ -41,6 +41,7 @@ float cubeSideLength;
 float lastCentroid[3];
 float last_min_depth;
 
+string object_id;
 
 ros::Publisher *publisher;
 
@@ -339,8 +340,8 @@ ROS_INFO("recieved an object cluster");
             float centroid_shift_distance = sqrt ((lastCentroid[0]-xTrans)*(lastCentroid[0]-xTrans) +
                                              (lastCentroid[1]-yTrans)*(lastCentroid[1]-yTrans) +
                                               (lastCentroid[2]-zTrans)*(lastCentroid[2]-zTrans) ) ;
-            float epsilon = 0.001;
-            ROS_INFO("Centroid Shift Distance: %f", centroid_shift_distance);
+            float epsilon = 0.005;
+            ROS_INFO("[%s] Centroid Shift Distance: %f",object_id.c_str(), centroid_shift_distance);
 
 
             if( centroid_shift_distance > epsilon ) {
@@ -383,10 +384,9 @@ ROS_INFO("recieved an object cluster");
                 icp3D.setMaxCorrespondenceDistance(*distance);
 
                   icp3D.setTransformationEpsilon (1e-6);
-                icp3D.setMaximumIterations (50);
+                icp3D.setMaximumIterations (1000);
 
 
-                icp3D.align(Final3D);
 
                 //std::cout << "has converged:" << icp.hasConverged() << " score: " << icp.getFitnessScore() << std::endl;
                 ROS_INFO("Used Distance %f",*distance);
@@ -416,19 +416,19 @@ ROS_INFO("recieved an object cluster");
                 icp2D.setInputCloud(cloud_in_ptr);
                 icp2D.setInputTarget(cloud_xyz_ptr);
                 icp2D.setMaxCorrespondenceDistance(*distance);
+                icp2D.setTransformationEpsilon (1e-3);
+                icp2D.setMaximumIterations (100);
 
-                  icp2D.setTransformationEpsilon (1e-6);
-                icp2D.setMaximumIterations (1000);
 
-
+                int count=0;
+                float scoreEpsilon = 0.000008;
+                while( (count<10) & (icp2D.getFitnessScore() > scoreEpsilon) & (icp3D.getFitnessScore() > scoreEpsilon) ) {
                 icp2D.align(Final2D);
-
-                //std::cout << "has converged:" << icp.hasConverged() << " score: " << icp.getFitnessScore() << std::endl;
-                ROS_INFO("Used Distance %f",*distance);
-
-               // icp.estimateRigidTransformationLM(cloud_in_ptr,cloud_xyz_ptr, transformation_matrix);
-
-                //std::cout << icp.getFinalTransformation() << std::endl;
+                icp3D.align(Final3D);
+                count++;
+                }
+                if((count==10) & (icp2D.getFitnessScore() > scoreEpsilon) & (icp3D.getFitnessScore() > scoreEpsilon))
+                ROS_INFO("[%s] Approximate Pose!! Object may not be visible enough!!", object_id.c_str());
 
 
                 if( icp2D.getFitnessScore() < icp3D.getFitnessScore()) {
@@ -450,9 +450,8 @@ ROS_INFO("recieved an object cluster");
                     }else {
                         /** Publish previous best transform*/
                     }
-
                 }
-
+                ROS_INFO("[%s] Best Score Found: %f",object_id.c_str(),best_score);
 
 
 }
@@ -462,7 +461,7 @@ ROS_INFO("recieved an object cluster");
 /** Initializes the pose estimator.
 * Reads the saved kd-tree of the training data and loads it
 */
-int initialize(float cubeSideLength, ros::Publisher *publisher, int *neighbors, double *distance){
+int initialize(float cubeSideLength, ros::Publisher *publisher, int *neighbors, double *distance, string object_id){
 
     best_score = DBL_MAX;
 
@@ -474,7 +473,7 @@ int initialize(float cubeSideLength, ros::Publisher *publisher, int *neighbors, 
 
     this->cubeSideLength = cubeSideLength;
     this->publisher = publisher;
-
+    this->object_id = object_id;
     this->distance = distance;
     this->neighbors = neighbors;
 
@@ -501,8 +500,8 @@ int neighbors;
 */
 void callback(extractObjects::extractObjectsConfig &config, uint32_t level)
 {
-	distances = config.distance;
-	neighbors = config.neighbors;
+//	distances = config.distance;
+//	neighbors = config.neighbors;
 }
 
 int main(int argc, char* argv[]) {
@@ -510,25 +509,65 @@ int main(int argc, char* argv[]) {
 
 	ros::init(argc, argv, "icpPoseEstimator");
 	ros::NodeHandle nh;
-    distances = 4;
-    int noOfObjects = 1;                //by default it will estimate poses for only one object
-    float cubeSideLength = 0.08;
+    distances = 0.1;
+    int noOfObjects = 3;                //by default it will estimate poses for only one object
+    float cubeSideLength = 0.06;
 
     if(argc>1) noOfObjects = atoi(argv[1]);
     if(argc>2) cubeSideLength = atof(argv[2]);
 
-    icpPoseEstimator poseEstimator[noOfObjects];
-    ros::Subscriber  objectClusterSubscriber[noOfObjects];
-    ros::Publisher cubeModelPublishers[noOfObjects];
+    icpPoseEstimator poseEstimator_green[noOfObjects];
+    ros::Subscriber  objectClusterSubscriber_green[noOfObjects];
+    ros::Publisher cubeModelPublishers_green[noOfObjects];
+
+
+    icpPoseEstimator poseEstimator_red[noOfObjects];
+    ros::Subscriber  objectClusterSubscriber_red[noOfObjects];
+    ros::Publisher cubeModelPublishers_red[noOfObjects];
+
+
+    icpPoseEstimator poseEstimator_yellow[noOfObjects];
+    ros::Subscriber  objectClusterSubscriber_yellow[noOfObjects];
+    ros::Publisher cubeModelPublishers_yellow[noOfObjects];
+
 
 
     for (int i =0; i<noOfObjects; i++ ) {
       std::stringstream ss, ss_1;
-      ss << "object_cluster_" << i+1;
-      ss_1 << "cube_model_" << i+1;
-      cubeModelPublishers[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss_1.str(), 1);
-      poseEstimator[i].initialize( cubeSideLength , &cubeModelPublishers[i], &neighbors, &distances);
-      objectClusterSubscriber[i]  = nh.subscribe(ss.str(), 1, &icpPoseEstimator::objectClusterCallback, &poseEstimator[i]);
+      ss << "green_object_cluster_" << i+1;
+      ss_1 << "green_cube_model_" << i+1;
+      cubeModelPublishers_green[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss_1.str(), 1);
+      poseEstimator_green[i].initialize( cubeSideLength , &cubeModelPublishers_green[i], &neighbors, &distances, ss_1.str());
+      objectClusterSubscriber_green[i]  = nh.subscribe(ss.str(), 1, &icpPoseEstimator::objectClusterCallback, &poseEstimator_green[i]);
+      //objectClusterSubscriber[i]  = nh.subscribe("/camera/rgb/points", 1, &icpPoseEstimator::objectClusterCallback, &poseEstimator[i]);
+
+    }
+
+
+
+
+    for (int i =0; i<noOfObjects; i++ ) {
+      std::stringstream ss, ss_1;
+      ss << "red_object_cluster_" << i+1;
+      ss_1 << "red_cube_model_" << i+1;
+      cubeModelPublishers_red[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss_1.str(), 1);
+      poseEstimator_red[i].initialize( cubeSideLength , &cubeModelPublishers_red[i], &neighbors, &distances, ss_1.str());
+      objectClusterSubscriber_red[i]  = nh.subscribe(ss.str(), 1, &icpPoseEstimator::objectClusterCallback, &poseEstimator_red[i]);
+      //objectClusterSubscriber[i]  = nh.subscribe("/camera/rgb/points", 1, &icpPoseEstimator::objectClusterCallback, &poseEstimator[i]);
+
+    }
+
+
+
+
+
+    for (int i =0; i<noOfObjects; i++ ) {
+      std::stringstream ss, ss_1;
+      ss << "yellow_object_cluster_" << i+1;
+      ss_1 << "yellow_cube_model_" << i+1;
+      cubeModelPublishers_yellow[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss_1.str(), 1);
+      poseEstimator_yellow[i].initialize( cubeSideLength , &cubeModelPublishers_yellow[i], &neighbors, &distances, ss_1.str());
+      objectClusterSubscriber_yellow[i]  = nh.subscribe(ss.str(), 1, &icpPoseEstimator::objectClusterCallback, &poseEstimator_yellow[i]);
       //objectClusterSubscriber[i]  = nh.subscribe("/camera/rgb/points", 1, &icpPoseEstimator::objectClusterCallback, &poseEstimator[i]);
 
     }

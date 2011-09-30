@@ -69,6 +69,7 @@ public:
         euclideanClusterExtractor.extract (cluster_indices);
 
         ROS_INFO("Number of objects found: %d", cluster_indices.size());
+        ROS_INFO("MAx. Objects Possible: %d", noOfObjects);
         int i=0;
         for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
         {
@@ -114,27 +115,62 @@ public:
 
 };
 
+
+
+
+objectClusterExtractor clusterExtractor_green, clusterExtractor_red, clusterExtractor_yellow;
+
+
+
 int main(int argc, char* argv[]){
 
-    int noOfObjects = 1;
+    int noOfObjects = 3;
 
     if(argc>1) noOfObjects = atoi(argv[1]);
 
 	ros::init(argc, argv, "extractObjectClusters");
 	ros::NodeHandle nh;
-    ros::Publisher clusterPublishers[noOfObjects];
+    ros::Publisher clusterPublishers_green[noOfObjects];
+    ros::Publisher clusterPublishers_red[noOfObjects];
+    ros::Publisher clusterPublishers_yellow[noOfObjects];
 
-    objectClusterExtractor clusterExtractor;
+
 
     for (int i =0; i<noOfObjects; i++ ) {
       std::stringstream ss;
-      ss << "object_cluster_" << i+1;
-      clusterPublishers[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss.str(), 1);
+      ss << "green_object_cluster_" << i+1;
+      clusterPublishers_green[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss.str(), 1);
     }
 
-    clusterExtractor.setPublishers(clusterPublishers);
-    clusterExtractor.setNumberOfObjects(noOfObjects);
-    ros::Subscriber  kinectCloudRaw = nh.subscribe("extractedROI", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor);
+    for (int i =0; i<noOfObjects; i++ ) {
+      std::stringstream ss;
+      ss << "red_object_cluster_" << i+1;
+      clusterPublishers_red[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss.str(), 1);
+    }
+
+
+    for (int i =0; i<noOfObjects; i++ ) {
+      std::stringstream ss;
+      ss << "yellow_object_cluster_" << i+1;
+      clusterPublishers_yellow[i] = nh.advertise< pcl::PointCloud<pcl::PointXYZ> >  (ss.str(), 1);
+    }
+
+    clusterExtractor_green.setPublishers(clusterPublishers_green);
+    clusterExtractor_green.setNumberOfObjects(noOfObjects);
+
+
+    clusterExtractor_red.setPublishers(clusterPublishers_red);
+    clusterExtractor_red.setNumberOfObjects(noOfObjects);
+
+
+    clusterExtractor_yellow.setPublishers(clusterPublishers_yellow);
+    clusterExtractor_yellow.setNumberOfObjects(noOfObjects);
+
+    ros::Subscriber  kinectCloudRaw_yellow = nh.subscribe("extractedROI_Yellow", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_yellow);
+    ros::Subscriber  kinectCloudRaw_red = nh.subscribe("extractedROI_Red", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_red);
+    ros::Subscriber  kinectCloudRaw_green = nh.subscribe("extractedROI_Green", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_green);
+
+
     ROS_INFO("Now extracting object clusters ;)");
 
 	ros::spin();

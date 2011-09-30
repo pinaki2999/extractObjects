@@ -193,6 +193,19 @@ gopalEstimatePoseICP/fast:
 .PHONY : gopalEstimatePoseICP/fast
 
 #=============================================================================
+# Target rules for targets named gopalExtractMultipleROI
+
+# Build rule for target.
+gopalExtractMultipleROI: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 gopalExtractMultipleROI
+.PHONY : gopalExtractMultipleROI
+
+# fast build rule for target.
+gopalExtractMultipleROI/fast:
+	$(MAKE) -f CMakeFiles/gopalExtractMultipleROI.dir/build.make CMakeFiles/gopalExtractMultipleROI.dir/build
+.PHONY : gopalExtractMultipleROI/fast
+
+#=============================================================================
 # Target rules for targets named gopalExtractObjectClusters
 
 # Build rule for target.
@@ -403,6 +416,21 @@ src/estimatePoseICP.s:
 .PHONY : src/estimatePoseICP.s
 
 # target to build an object file
+src/extractMultipleROI.o:
+	$(MAKE) -f CMakeFiles/gopalExtractMultipleROI.dir/build.make CMakeFiles/gopalExtractMultipleROI.dir/src/extractMultipleROI.o
+.PHONY : src/extractMultipleROI.o
+
+# target to preprocess a source file
+src/extractMultipleROI.i:
+	$(MAKE) -f CMakeFiles/gopalExtractMultipleROI.dir/build.make CMakeFiles/gopalExtractMultipleROI.dir/src/extractMultipleROI.i
+.PHONY : src/extractMultipleROI.i
+
+# target to generate assembly for a file
+src/extractMultipleROI.s:
+	$(MAKE) -f CMakeFiles/gopalExtractMultipleROI.dir/build.make CMakeFiles/gopalExtractMultipleROI.dir/src/extractMultipleROI.s
+.PHONY : src/extractMultipleROI.s
+
+# target to build an object file
 src/extractObjectClusters.o:
 	$(MAKE) -f CMakeFiles/gopalExtractObjectClusters.dir/build.make CMakeFiles/gopalExtractObjectClusters.dir/src/extractObjectClusters.o
 .PHONY : src/extractObjectClusters.o
@@ -461,6 +489,7 @@ help:
 	@echo "... clean-test-results"
 	@echo "... edit_cache"
 	@echo "... gopalEstimatePoseICP"
+	@echo "... gopalExtractMultipleROI"
 	@echo "... gopalExtractObjectClusters"
 	@echo "... gopalExtractROI"
 	@echo "... gopalSelectHSVLimits"
@@ -480,6 +509,9 @@ help:
 	@echo "... src/estimatePoseICP.o"
 	@echo "... src/estimatePoseICP.i"
 	@echo "... src/estimatePoseICP.s"
+	@echo "... src/extractMultipleROI.o"
+	@echo "... src/extractMultipleROI.i"
+	@echo "... src/extractMultipleROI.s"
 	@echo "... src/extractObjectClusters.o"
 	@echo "... src/extractObjectClusters.i"
 	@echo "... src/extractObjectClusters.s"

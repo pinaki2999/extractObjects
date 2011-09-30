@@ -306,44 +306,111 @@ public:
     }
 };
 
+ros::Publisher pubGreenROI, pubRedROI, pubYellowROI;
+cubeGrabber greenCubeGrabber, redCubeGrabber, yellowCubeGrabber;
+
+	void kinectCloudRawCallback(const sensor_msgs::PointCloud2 &cloud){
+        greenCubeGrabber.kinectCloudRawCallback(cloud);
+        redCubeGrabber.kinectCloudRawCallback(cloud);
+        yellowCubeGrabber.kinectCloudRawCallback(cloud);
+	}
+
+
 int main(int argc, char* argv[]){
 	ros::init(argc, argv, "extractObject");
 	ros::NodeHandle nh;
-    ros::Publisher pubROI = nh.advertise< pcl::PointCloud<pcl::PointXYZRGB> >  ("extractedROI", 1);
 
+    pubGreenROI = nh.advertise< pcl::PointCloud<pcl::PointXYZRGB> >  ("extractedROI_Green", 1);
+    pubRedROI = nh.advertise< pcl::PointCloud<pcl::PointXYZRGB> >  ("extractedROI_Red", 1);
+    pubYellowROI = nh.advertise< pcl::PointCloud<pcl::PointXYZRGB> >  ("extractedROI_Yellow", 1);
 
+	greenCubeGrabber.setPublisher(&pubGreenROI);
+	redCubeGrabber.setPublisher(&pubRedROI);
+	yellowCubeGrabber.setPublisher(&pubYellowROI);
 
+    ifstream configFileStream;
 
-    cubeGrabber greenCubeGrabber;
-	greenCubeGrabber.setPublisher(&pubROI);
+	float minH_Green=0, maxH_Green=255, minS_Green=0, maxS_Green=255;
+    float minH_Red=0, maxH_Red=255, minS_Red=0, maxS_Red=255;
+    float minH_Yellow=0, maxH_Yellow=255, minS_Yellow=0, maxS_Yellow=255;
 
-	float minH=0, maxH=255, minS=0, maxS=255;
-    if (argc == 2) {
-        ifstream configFileStream;
-        configFileStream.open(argv[1]);
+        /**Reading Green ROI configuration*/
+        configFileStream.open("./greenRoiConfig");
         if ( configFileStream.is_open() ) {     //if file exists
             string s;
             while(getline(configFileStream, s)){    //extract the values of the parameters
                 	std::vector< std::string > tempVec;
                     boost::split(tempVec, s, boost::is_any_of("="));
                     if(!tempVec[0].compare("minH")) {
-                         minH = atof(tempVec[1].c_str());
+                         minH_Green = atof(tempVec[1].c_str());
                     } else if(!tempVec[0].compare("maxH")) {
-                         maxH = atof(tempVec[1].c_str());
+                         maxH_Green = atof(tempVec[1].c_str());
                     } else if(!tempVec[0].compare("minS")) {
-                         minS = atof(tempVec[1].c_str());
+                         minS_Green = atof(tempVec[1].c_str());
                     } else if(!tempVec[0].compare("maxS")) {
-                         maxS = atof(tempVec[1].c_str());
+                         maxS_Green = atof(tempVec[1].c_str());
                     }
             }
 
         }
-    }
+        configFileStream.close();
 
-    greenCubeGrabber.setHsvLimits(minH,maxH,minS,maxS);
-    ROS_INFO ("ROI extraction using minH=%f, maxH=%f, minS=%f, maxH=%f",minH,maxH,minS,maxS);
+        /**Reading Red ROI configuration*/
+        configFileStream.open("./redRoiConfig");
+        if ( configFileStream.is_open() ) {     //if file exists
+            string s;
+            while(getline(configFileStream, s)){    //extract the values of the parameters
+                	std::vector< std::string > tempVec;
+                    boost::split(tempVec, s, boost::is_any_of("="));
+                    if(!tempVec[0].compare("minH")) {
+                         minH_Red = atof(tempVec[1].c_str());
+                    } else if(!tempVec[0].compare("maxH")) {
+                         maxH_Red = atof(tempVec[1].c_str());
+                    } else if(!tempVec[0].compare("minS")) {
+                         minS_Red = atof(tempVec[1].c_str());
+                    } else if(!tempVec[0].compare("maxS")) {
+                         maxS_Red = atof(tempVec[1].c_str());
+                    }
+            }
 
-    ros::Subscriber  kinectCloudRaw = nh.subscribe("/camera/rgb/points", 1,&cubeGrabber::kinectCloudRawCallback, &greenCubeGrabber);
+        }
+        configFileStream.close();
+
+
+
+        /**Reading Yellow ROI configuration*/
+        configFileStream.open("./yellowRoiConfig");
+        if ( configFileStream.is_open() ) {     //if file exists
+            string s;
+            while(getline(configFileStream, s)){    //extract the values of the parameters
+                	std::vector< std::string > tempVec;
+                    boost::split(tempVec, s, boost::is_any_of("="));
+                    if(!tempVec[0].compare("minH")) {
+                         minH_Yellow = atof(tempVec[1].c_str());
+                    } else if(!tempVec[0].compare("maxH")) {
+                         maxH_Yellow = atof(tempVec[1].c_str());
+                    } else if(!tempVec[0].compare("minS")) {
+                         minS_Yellow = atof(tempVec[1].c_str());
+                    } else if(!tempVec[0].compare("maxS")) {
+                         maxS_Yellow = atof(tempVec[1].c_str());
+                    }
+            }
+
+        }
+        configFileStream.close();
+
+
+
+    greenCubeGrabber.setHsvLimits(minH_Green,maxH_Green,minS_Green,maxS_Green);
+    ROS_INFO ("Green ROI extraction using minH=%f, maxH=%f, minS=%f, maxH=%f",minH_Green,maxH_Green,minS_Green,maxS_Green);
+
+    redCubeGrabber.setHsvLimits(minH_Red,maxH_Red,minS_Red,maxS_Red);
+    ROS_INFO ("Red ROI extraction using minH=%f, maxH=%f, minS=%f, maxH=%f",minH_Red,maxH_Red,minS_Red,maxS_Red);
+
+    yellowCubeGrabber.setHsvLimits(minH_Yellow,maxH_Yellow,minS_Yellow,maxS_Yellow);
+    ROS_INFO ("Yellow ROI extraction using minH=%f, maxH=%f, minS=%f, maxH=%f",minH_Yellow,maxH_Yellow,minS_Yellow,maxS_Yellow);
+
+    ros::Subscriber  kinectCloudRaw_green = nh.subscribe("/camera/rgb/points", 1,&kinectCloudRawCallback);
 
     ROS_INFO("Now extracting ROIs ;)");
 
