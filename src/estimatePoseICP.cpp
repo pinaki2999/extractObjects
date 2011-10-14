@@ -22,11 +22,15 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
 #include <pcl/registration/registration.h>
+#include <pcl/common/transform.h>
 
 #include <vector>
 
 #include <extractObjects/extractObjectsConfig.h>
 #include <dynamic_reconfigure/server.h>
+
+
+#include <algorithm/registration/IterativeClosestPoint.h>
 
 using namespace std;
 class icpPoseEstimator{
@@ -40,7 +44,7 @@ pcl::PointCloud<pcl::PointXYZ>  cubeModel2D;
 float cubeSideLength;
 float lastCentroid[3];
 float last_min_depth;
-
+Eigen::Matrix4f bestTransformation;
 string object_id;
 
 ros::Publisher *publisher;
@@ -130,7 +134,7 @@ void generateCube3D(){
 
 
 
-	float tempHomogenousMatrix[16];
+	Eigen::Matrix4f  tempHomogenousMatrix;
 	calculateHomogeneousMatrix(90,0,0,0,0,0,tempHomogenousMatrix,true);
     applyHomogeneousTransformation(&cubeModel3D, &cubeModel3D, tempHomogenousMatrix);
     applyHomogeneousTransformation(&cubeModel3D, &cubeModel3D, tempHomogenousMatrix);
@@ -220,16 +224,19 @@ void generateCube2D(){
 
 
 
-	float tempHomogenousMatrix[16];
+	Eigen::Matrix4f  tempHomogenousMatrix;
 	calculateHomogeneousMatrix(90,0,0,0,0,0,tempHomogenousMatrix,true);
     applyHomogeneousTransformation(&cubeModel2D, &cubeModel2D, tempHomogenousMatrix);
     applyHomogeneousTransformation(&cubeModel2D, &cubeModel2D, tempHomogenousMatrix);
+
+
+
 
 }
 
 
 void applyHomogeneousTransformation(pcl::PointCloud<pcl::PointXYZ> * cloud, pcl::PointCloud<pcl::PointXYZ>*
-transformedCloudCube, float *homogenousMatrix){
+transformedCloudCube, Eigen::Matrix4f  &homogenousMatrix){
 	transformedCloudCube->width = cloud->width;
 	transformedCloudCube->height = cloud->height;
 	transformedCloudCube->is_dense = false;
@@ -265,7 +272,7 @@ transformedCloudCube, float *homogenousMatrix){
 
 
 void calculateHomogeneousMatrix(float xRot,float yRot,
-		float zRot, float xtrans, float ytrans, float ztrans, float* homogeneousMatrix, bool inDegrees){
+		float zRot, float xtrans, float ytrans, float ztrans, Eigen::Matrix4f  &homogeneousMatrix, bool inDegrees){
 	if(inDegrees){
 		float PI = 3.14159265;
 		xRot = xRot*(PI/180);
@@ -317,14 +324,12 @@ public:
 /** estimates poses of received cube-data*/
 void objectClusterCallback(const sensor_msgs::PointCloud2 &cloud){
 
-ROS_INFO("recieved an object cluster");
-
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz_ptr(new pcl::PointCloud<pcl::PointXYZ>());
     float xTrans=0.0, yTrans=0.0, zTrans=0.0, xRot=0.0, yRot=0.0, zRot=0.0;
     pcl::fromROSMsg (cloud, *cloud_xyz_ptr);
 
 
-    /**Get the orientation and translation of the objects*/
+    /**Get translation of the objects*/
 
             Eigen::Vector4f centroid3d;
         	pcl::compute3DCentroid(*cloud_xyz_ptr,centroid3d);
@@ -341,7 +346,7 @@ ROS_INFO("recieved an object cluster");
                                              (lastCentroid[1]-yTrans)*(lastCentroid[1]-yTrans) +
                                               (lastCentroid[2]-zTrans)*(lastCentroid[2]-zTrans) ) ;
             float epsilon = 0.005;
-            ROS_INFO("[%s] Centroid Shift Distance: %f",object_id.c_str(), centroid_shift_distance);
+            //ROS_INFO("[%s] Centroid Shift Distance: %f",object_id.c_str(), centroid_shift_distance);
 
 
             if( centroid_shift_distance > epsilon ) {
@@ -350,74 +355,68 @@ ROS_INFO("recieved an object cluster");
                 lastCentroid[1] = yTrans;
                 lastCentroid[2] = zTrans;
             }
-       /**Translate the cube models which will be our initial estimate for ICP*/
-                float homogeneousMatrix[16];
-                pcl::PointCloud<pcl::PointXYZ> transformedCubeModel3D;
-                pcl::PointCloud<pcl::PointXYZ> transformedCubeModel2D;
-                calculateHomogeneousMatrix(0,0,0,xTrans,yTrans,zTrans,homogeneousMatrix,true);
-                //calculateHomogeneousMatrix(0,0,0,0,0,0,homogeneousMatrix,true);
-                applyHomogeneousTransformation(&cubeModel3D, &transformedCubeModel3D, homogeneousMatrix);
-                applyHomogeneousTransformation(&cubeModel2D, &transformedCubeModel2D, homogeneousMatrix);
 
+
+       /**Translate the cube models which will be our initial estimate for ICP*/
+            Eigen::Matrix4f homogeneousMatrix;
+            pcl::PointCloud<pcl::PointXYZ> transformedCubeModel3D;
+            pcl::PointCloud<pcl::PointXYZ> transformedCubeModel2D;
+            calculateHomogeneousMatrix(0,0,0,xTrans,yTrans,zTrans,homogeneousMatrix,true);
+            //calculateHomogeneousMatrix(0,0,0,0,0,0,homogeneousMatrix,true);
+            applyHomogeneousTransformation(&cubeModel3D, &transformedCubeModel3D, homogeneousMatrix);
+            applyHomogeneousTransformation(&cubeModel2D, &transformedCubeModel2D, homogeneousMatrix);
 
 
         /** Perform registration of the models using ICP for the 3D model*/
 
                 pcl::IterativeClosestPointNonLinear<pcl::PointXYZ, pcl::PointXYZ> icp3D;
-                pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-                pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out_ptr (new pcl::PointCloud<pcl::PointXYZ>);
+                pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in_ptr_3D (new pcl::PointCloud<pcl::PointXYZ>);
                 pcl::PointCloud<pcl::PointXYZ> Final3D;
 
-                cloud_in_ptr->width = transformedCubeModel3D.width;
-                cloud_in_ptr->height = transformedCubeModel3D.height;
-                cloud_in_ptr->points.resize(cloud_in_ptr->width * cloud_in_ptr->height);
+                cloud_in_ptr_3D->width = transformedCubeModel3D.width;
+                cloud_in_ptr_3D->height = transformedCubeModel3D.height;
+                cloud_in_ptr_3D->points.resize(cloud_in_ptr_3D->width * cloud_in_ptr_3D->height);
 
-                for(unsigned int i=0; i < cloud_in_ptr->points.size();i++){
+                for(unsigned int i=0; i < cloud_in_ptr_3D->points.size();i++){
 
-                    cloud_in_ptr->points[i].x = transformedCubeModel3D.points[i].x;
-                    cloud_in_ptr->points[i].y = transformedCubeModel3D.points[i].y;
-                    cloud_in_ptr->points[i].z = transformedCubeModel3D.points[i].z;
+                    cloud_in_ptr_3D->points[i].x = transformedCubeModel3D.points[i].x;
+                    cloud_in_ptr_3D->points[i].y = transformedCubeModel3D.points[i].y;
+                    cloud_in_ptr_3D->points[i].z = transformedCubeModel3D.points[i].z;
                 }
 
-                icp3D.setInputCloud(cloud_in_ptr);
+                icp3D.setInputCloud(cloud_in_ptr_3D);
                 icp3D.setInputTarget(cloud_xyz_ptr);
                 icp3D.setMaxCorrespondenceDistance(*distance);
-
-                  icp3D.setTransformationEpsilon (1e-6);
+                icp3D.setTransformationEpsilon (1e-6);
                 icp3D.setMaximumIterations (1000);
 
-
-
-                //std::cout << "has converged:" << icp.hasConverged() << " score: " << icp.getFitnessScore() << std::endl;
-                ROS_INFO("Used Distance %f",*distance);
-
-               // icp.estimateRigidTransformationLM(cloud_in_ptr,cloud_xyz_ptr, transformation_matrix);
-
-                //std::cout << icp.getFinalTransformation() << std::endl;
-
+//ROS_INFO("Used Distance %f",*distance);
 
 
         /** Perform registration of the models using ICP for the 3D model*/
 
                 pcl::IterativeClosestPointNonLinear<pcl::PointXYZ, pcl::PointXYZ> icp2D;
+                pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in_ptr_2D (new pcl::PointCloud<pcl::PointXYZ>);
                 pcl::PointCloud<pcl::PointXYZ> Final2D;
 
-                cloud_in_ptr->width = transformedCubeModel2D.width;
-                cloud_in_ptr->height = transformedCubeModel2D.height;
-                cloud_in_ptr->points.resize(cloud_in_ptr->width * cloud_in_ptr->height);
+                cloud_in_ptr_2D->width = transformedCubeModel2D.width;
+                cloud_in_ptr_2D->height = transformedCubeModel2D.height;
+                cloud_in_ptr_2D->points.resize(cloud_in_ptr_2D->width * cloud_in_ptr_2D->height);
 
-                for(unsigned int i=0; i < cloud_in_ptr->points.size();i++){
+                for(unsigned int i=0; i < cloud_in_ptr_2D->points.size();i++){
 
-                    cloud_in_ptr->points[i].x = transformedCubeModel2D.points[i].x;
-                    cloud_in_ptr->points[i].y = transformedCubeModel2D.points[i].y;
-                    cloud_in_ptr->points[i].z = transformedCubeModel2D.points[i].z;
+                    cloud_in_ptr_2D->points[i].x = transformedCubeModel2D.points[i].x;
+                    cloud_in_ptr_2D->points[i].y = transformedCubeModel2D.points[i].y;
+                    cloud_in_ptr_2D->points[i].z = transformedCubeModel2D.points[i].z;
                 }
 
-                icp2D.setInputCloud(cloud_in_ptr);
+                icp2D.setInputCloud(cloud_in_ptr_2D);
                 icp2D.setInputTarget(cloud_xyz_ptr);
                 icp2D.setMaxCorrespondenceDistance(*distance);
-                icp2D.setTransformationEpsilon (1e-3);
-                icp2D.setMaximumIterations (100);
+                icp2D.setTransformationEpsilon (1e-6);
+                icp2D.setMaximumIterations (1000);
+
+
 
 
                 int count=0;
@@ -434,24 +433,67 @@ ROS_INFO("recieved an object cluster");
                 if( icp2D.getFitnessScore() < icp3D.getFitnessScore()) {
 
                     if (icp2D.getFitnessScore() < best_score ){
-                        Final2D.header.frame_id = "openni_rgb_optical_frame";
-                        publisher->publish(Final2D);
+                       //   Final2D.header.frame_id = "openni_rgb_optical_frame";
+                        //publisher->publish(Final2D);
                         best_score = icp2D.getFitnessScore();
-                    } else {
-                        /** Publish previous best transform*/
+                        bestTransformation = icp2D.getFinalTransformation();
                     }
 
                 } else {
 
                     if (icp3D.getFitnessScore() < best_score ) {
-                        Final3D.header.frame_id = "openni_rgb_optical_frame";
-                        publisher->publish(Final3D);
+                        //Final3D.header.frame_id = "openni_rgb_optical_frame";
+                        //publisher->publish(Final3D);
                         best_score = icp3D.getFitnessScore();
-                    }else {
-                        /** Publish previous best transform*/
-                    }
+                        bestTransformation = icp3D.getFinalTransformation();
+                  }
                 }
+
+                cout << bestTransformation;
+
                 ROS_INFO("[%s] Best Score Found: %f",object_id.c_str(),best_score);
+/*
+                yRot = asin (-bestTransformation[2]);
+                xRot = asin (bestTransformation[6]/cos(yRot));
+                zRot = asin (bestTransformation[1]/cos(yRot));
+
+                        xTrans = bestTransformation[12];
+                        yTrans = bestTransformation[13];
+                        zTrans = bestTransformation[14];
+*/
+
+
+  //              homogeneousMatrix=homogeneousMatrix*bestTransformation;
+/*
+                homogeneousMatrix[12]=xTrans;
+                homogeneousMatrix[13]=yTrans;
+                homogeneousMatrix[14]=zTrans;
+*/
+
+                Eigen::Affine3f temp;
+                temp(0,0) = bestTransformation[0];
+                temp(1,0) = bestTransformation[1];
+                temp(2,0) = bestTransformation[2];
+
+                temp(0,1) = bestTransformation[4];
+                temp(1,1) = bestTransformation[5];
+                temp(2,1) = bestTransformation[6];
+
+                temp(0,2) = bestTransformation[8];
+                temp(1,2) = bestTransformation[9];
+                temp(2,2) = bestTransformation[10];
+
+                temp(0,3) = bestTransformation[12];
+                temp(1,3) = bestTransformation[13];
+                temp(2,3) = bestTransformation[14];
+
+                pcl::getTranslationAndEulerAngles(temp,xTrans, yTrans, zTrans, xRot, yRot, zRot);
+
+
+                calculateHomogeneousMatrix(xRot,yRot,zRot,xTrans,yTrans,zTrans,homogeneousMatrix,false);
+                applyHomogeneousTransformation(&cubeModel2D, &transformedCubeModel2D, homogeneousMatrix);
+                transformedCubeModel2D.header.frame_id = "openni_rgb_optical_frame";
+                  publisher->publish(transformedCubeModel2D);
 
 
 }

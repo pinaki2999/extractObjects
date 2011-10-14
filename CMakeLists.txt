@@ -22,6 +22,20 @@ include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 gencfg()
 
 
+
+# add library directories (-L)
+LINK_DIRECTORIES(
+    /home/pinaki/hack-arena/BRICS_3D/lib/
+)
+
+# add include directories (-I)
+INCLUDE_DIRECTORIES(
+     /home/pinaki/hack-arena/BRICS_3D/src
+     /home/pinaki/hack-arena/BRICS_3D/external
+)
+
+
+
 rosbuild_add_executable(gopalSelectHSVLimits src/selectHSVLimits.cpp)
 #rosbuild_add_executable(gopalSetTraingData src/setTraingData.cpp)
 
@@ -33,3 +47,4 @@ rosbuild_add_executable(gopalExtractObjectClusters src/extractObjectClusters.cpp
 #rosbuild_add_executable(gopalEstimatePoseVfh src/estimatePoseVfh.cpp)
 
 rosbuild_add_executable(gopalEstimatePoseICP src/estimatePoseICP.cpp)
+target_link_libraries(gopalEstimatePoseICP libbrics_3dpm_algorithm.a)

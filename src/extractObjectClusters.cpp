@@ -166,12 +166,14 @@ int main(int argc, char* argv[]){
     clusterExtractor_yellow.setPublishers(clusterPublishers_yellow);
     clusterExtractor_yellow.setNumberOfObjects(noOfObjects);
 
-    ros::Subscriber  kinectCloudRaw_yellow = nh.subscribe("extractedROI_Yellow", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_yellow);
+
+   // ros::Subscriber  kinectCloudRaw_yellow = nh.subscribe("extractedROI_Yellow", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_yellow);
     ros::Subscriber  kinectCloudRaw_red = nh.subscribe("extractedROI_Red", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_red);
-    ros::Subscriber  kinectCloudRaw_green = nh.subscribe("extractedROI_Green", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_green);
+   // ros::Subscriber  kinectCloudRaw_green = nh.subscribe("extractedROI_Green", 1, &objectClusterExtractor::hsvBasedROICallback, &clusterExtractor_green);
 
 
     ROS_INFO("Now extracting object clusters ;)");
+    ROS_INFO("ONLY RED OBJECT CLUSTERS ARE EXTRACTED!!!!!!!;)");
 
 	ros::spin();
 	return 0;
